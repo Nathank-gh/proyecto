@@ -1,0 +1,940 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Mi Muro</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;}
+
+body{
+  font-family:'Nunito',sans-serif;
+  background:#000000;
+  max-width:540px;
+  margin:20px auto;
+  padding:0 10px;
+}
+
+/* ---- Notificación ---- */
+#notificacion{
+  position:fixed;top:20px;left:50%;transform:translateX(-50%);
+  background:#4CAF50;color:#fff;
+  padding:12px 24px;border-radius:25px;
+  box-shadow:0 2px 6px rgba(0,0,0,.3);
+  font-weight:700;font-size:14px;
+  opacity:0;transition:opacity .4s;z-index:99999;white-space:nowrap;
+}
+#notificacion.show{opacity:1;}
+
+/* ---- Overlay / Modal ---- */
+.overlay{
+  position:fixed;top:0;left:0;width:100%;height:100%;
+  background:rgba(0,0,0,.7);
+  display:none;justify-content:center;align-items:center;z-index:9999;
+}
+.overlay.visible{display:flex;}
+
+.modal-box{
+  background:#1c1c2e;
+  padding:30px;border-radius:16px;width:340px;
+  text-align:center;
+  box-shadow:0 8px 40px rgba(108,99,255,.3);
+  border:1.5px solid #2e2e4a;
+  animation:popIn .25s ease;
+  position:relative;
+}
+@keyframes popIn{from{opacity:0;transform:scale(.93)}to{opacity:1;transform:scale(1)}}
+
+.modal-box h2{font-size:20px;font-weight:800;margin-bottom:16px;color:#e0dfff;}
+
+.modal-close{
+  position:absolute;top:12px;right:14px;
+  background:none;border:none;color:#888;
+  font-size:20px;cursor:pointer;line-height:1;
+  padding:2px 6px;border-radius:6px;
+}
+.modal-close:hover{color:#fff;background:#333;}
+
+/* Tabs */
+.auth-tabs{display:flex;gap:0;margin-bottom:18px;border-radius:10px;overflow:hidden;border:1.5px solid #2e2e4a;}
+.auth-tab{
+  flex:1;padding:9px;background:#13131f;color:#888;
+  border:none;font-family:'Nunito',sans-serif;font-weight:700;font-size:14px;
+  cursor:pointer;transition:background .2s,color .2s;
+}
+.auth-tab.active{background:#6c63ff;color:#fff;}
+
+/* Panel dentro del modal */
+.auth-panel{display:none;}
+.auth-panel.active{display:block;}
+
+input[type=text],input[type=password],input[type=email]{
+  width:100%;padding:10px 14px;margin:5px 0;
+  border:2px solid #2e2e4a;border-radius:8px;
+  background:#13131f;color:#e0dfff;
+  font-family:'Nunito',sans-serif;font-size:14px;outline:none;
+  transition:border .2s;
+}
+input::placeholder{color:#555;}
+input[type=text]:focus,input[type=password]:focus,input[type=email]:focus{border-color:#6c63ff;}
+
+button{
+  padding:9px 18px;margin-top:6px;cursor:pointer;
+  border:none;border-radius:8px;font-family:'Nunito',sans-serif;
+  font-weight:700;font-size:14px;transition:opacity .2s,transform .1s;
+}
+button:hover{opacity:.88;transform:translateY(-1px);}
+button:active{transform:translateY(0);}
+
+.btn-primary{background:#6c63ff;color:white;width:100%;padding:11px;margin-top:10px;}
+.btn-link{
+  background:none;border:none;color:#6c63ff;
+  text-decoration:underline;font-size:13px;
+  cursor:pointer;margin-top:8px;font-family:'Nunito',sans-serif;
+}
+
+/* Captcha */
+.captcha-wrap{
+  display:flex;align-items:center;gap:10px;
+  margin:10px 0;background:#13131f;
+  border:2px solid #2e2e4a;border-radius:8px;padding:8px 12px;
+}
+#captchaCanvas{border-radius:6px;flex-shrink:0;}
+.captcha-refresh{
+  background:none;border:none;color:#6c63ff;cursor:pointer;
+  font-size:18px;padding:0;margin-top:0;
+}
+.captcha-refresh:hover{transform:rotate(30deg);}
+#captchaInput{flex:1;border:none!important;padding:6px 4px!important;margin:0!important;}
+
+/* ---- Composer ---- */
+.composer{
+  background:rgb(105,105,105);border-radius:14px;
+  padding:16px;margin-bottom:14px;
+  box-shadow:0 2px 10px rgba(0,0,0,.2);
+}
+.composer-top{display:flex;align-items:flex-start;gap:10px;}
+#avatarComposer{
+  width:42px;height:42px;border-radius:50%;
+  object-fit:cover;flex-shrink:0;
+  border:2px solid #5e5e5e;background:#5e5e5e;
+}
+textarea{
+  flex:1;padding:10px;font-size:15px;
+  font-family:'Nunito',sans-serif;
+  border:2px solid #5e5e5e;border-radius:10px;
+  resize:none;height:72px;outline:none;
+  background:#fff;color:#222;
+  transition:border .2s;
+}
+textarea:focus{border-color:#6c63ff;}
+.composer-actions{
+  display:flex;justify-content:space-between;align-items:center;margin-top:10px;
+}
+#previewImagen{max-width:100%;border-radius:10px;margin-top:8px;display:none;}
+#previewVideo{max-width:100%;border-radius:10px;margin-top:8px;display:none;}
+.btn-img{
+  background:#f0f4f8;color:#555;padding:7px 14px;font-size:13px;
+  display:flex;align-items:center;gap:5px;
+}
+.btn-img svg{width:16px;height:16px;}
+#postBtn{background:#6c63ff;color:white;padding:8px 20px;}
+
+/* ---- Posts ---- */
+.post{
+  background:rgb(105,105,105);padding:14px;margin-bottom:10px;
+  border-radius:14px;box-shadow:0 2px 10px rgba(0,0,0,.07);
+  animation:fadeIn .3s ease;
+}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.post-header{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
+.post-avatar{width:40px;height:40px;border-radius:50%;object-fit:cover;border:2px solid #555;background:#555;flex-shrink:0;}
+.post-header-info{display:flex;flex-direction:column;}
+.post-usuario{font-weight:800;font-size:15px;color:#fff;}
+.post-fecha{font-size:12px;color:#ccc;}
+.post-texto{font-size:15px;color:#fff;margin-bottom:8px;line-height:1.5;}
+.post-imagen{width:100%;border-radius:10px;margin-bottom:8px;display:block;max-height:360px;object-fit:cover;}
+.post-video{width:100%;border-radius:10px;margin-bottom:8px;display:block;}
+.post-footer{display:flex;justify-content:space-between;align-items:center;margin-top:4px;}
+.post-likes{font-size:13px;color:#eee;display:flex;align-items:center;gap:4px;}
+.accionesPost{display:flex;gap:6px;}
+.likeBtn{background:#000;border:1.5px solid #ffb3c8;color:#e0356b;padding:5px 12px;font-size:13px;}
+.editarBtn{background:#000;border:1.5px solid #ffd980;color:#c07d00;padding:5px 12px;font-size:13px;}
+.borrarBtn{background:#000;border:1.5px solid #ffb3b3;color:#cc2222;padding:5px 12px;font-size:13px;}
+
+/* ---- Header ---- */
+.app-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;}
+.app-header h2{font-size:22px;font-weight:800;color:#e0dfff;margin:0;}
+#btnCerrarSesion{
+  background:none;border:1.5px solid #555;color:#aaa;
+  padding:6px 14px;font-size:13px;border-radius:8px;
+  display:none;
+}
+#btnCerrarSesion:hover{border-color:#e05555;color:#e05555;}
+
+/* ---- Perfil ---- */
+.perfil-area{
+  display:flex;align-items:center;gap:10px;
+  background:rgb(105,105,105);border-radius:14px;
+  padding:10px 14px;margin-bottom:14px;
+  box-shadow:0 2px 10px rgba(0,0,0,.07);
+}
+#avatarPerfil{
+  width:48px;height:48px;border-radius:50%;
+  object-fit:cover;border:2px solid #6c63ff;background:#555;
+  cursor:pointer;transition:transform .2s;
+}
+#avatarPerfil:hover{transform:scale(1.07);}
+.perfil-info{flex:1;}
+.perfil-nombre{font-weight:800;font-size:15px;color:#fff;}
+.perfil-hint{font-size:12px;color:#ccc;}
+#inputFotoPerfil{display:none;}
+#inputImagenPost{display:none;}
+
+/* ---- Botón grabación ---- */
+#btnGrabar{
+  position:fixed;bottom:24px;right:24px;
+  width:56px;height:56px;border-radius:50%;
+  background:#1c1c2e;border:2px solid #6c63ff;
+  color:#e0dfff;font-size:22px;line-height:56px;
+  text-align:center;
+  box-shadow:0 4px 20px rgba(108,99,255,.4);
+  cursor:pointer;z-index:9000;
+  pointer-events:all;
+  transition:transform .2s,background .2s,box-shadow .2s;
+  padding:0;margin:0;
+  -webkit-appearance:none;appearance:none;
+  user-select:none;-webkit-user-select:none;
+}
+#btnGrabar *{pointer-events:none;}
+#btnGrabar:hover{transform:scale(1.1);box-shadow:0 6px 28px rgba(108,99,255,.6);}
+#btnGrabar.grabando{
+  background:#3a0000;border-color:#e05555;
+  animation:pulsarRojo 1.2s infinite;
+}
+@keyframes pulsarRojo{
+  0%,100%{box-shadow:0 0 0 0 rgba(224,85,85,.5);}
+  50%{box-shadow:0 0 0 12px rgba(224,85,85,0);}
+}
+#grabarTooltip{
+  position:fixed;bottom:30px;right:90px;
+  background:#1c1c2e;color:#e0dfff;
+  padding:6px 12px;border-radius:8px;
+  font-size:13px;font-weight:700;
+  border:1px solid #2e2e4a;
+  opacity:0;pointer-events:none;
+  transition:opacity .2s;white-space:nowrap;
+  z-index:9000;
+}
+
+/* ---- Preview en vivo ---- */
+#livePreviewWrap{
+  display:none;
+  background:rgb(105,105,105);border-radius:14px;
+  padding:14px;margin-bottom:10px;
+  box-shadow:0 2px 10px rgba(224,85,85,.3);
+  border:2px solid #e05555;
+  animation:fadeIn .3s ease;
+  position:relative;
+}
+#livePreviewWrap.visible{display:block;}
+.live-badge{
+  display:inline-flex;align-items:center;gap:6px;
+  background:#e05555;color:#fff;
+  font-size:12px;font-weight:800;
+  padding:4px 10px;border-radius:20px;
+  margin-bottom:10px;
+  animation:pulsarRojo 1.2s infinite;
+}
+.live-dot{
+  width:8px;height:8px;border-radius:50%;
+  background:#fff;
+  animation:pulsarDot 1.2s infinite;
+}
+@keyframes pulsarDot{0%,100%{opacity:1;}50%{opacity:.3;}}
+#liveVideo{
+  width:100%;border-radius:10px;display:block;
+  background:#000;max-height:300px;object-fit:contain;
+}
+#liveTimer{
+  font-size:13px;font-weight:700;color:#eee;
+  margin-top:8px;text-align:right;
+}
+#btnPararGrabacion{
+  width:100%;margin-top:10px;
+  background:#e05555;color:#fff;
+  padding:10px;font-size:14px;
+  border-radius:10px;
+}
+
+/* Recuperar contraseña panel */
+#panelRecuperar{display:none;}
+#recuperarResult{
+  margin-top:10px;padding:10px;border-radius:8px;
+  font-size:13px;font-weight:700;
+  display:none;
+}
+#recuperarResult.ok{background:#1a3a1a;color:#6fcf6f;border:1px solid #2a5a2a;}
+#recuperarResult.err{background:#3a1a1a;color:#e07070;border:1px solid #5a2a2a;}
+
+/* Modal confirmación vídeo */
+#modalVideo{
+  position:fixed;top:0;left:0;width:100%;height:100%;
+  background:rgba(0,0,0,.8);
+  display:none;justify-content:center;align-items:center;z-index:99998;
+}
+#modalVideo.visible{display:flex;}
+.modal-video-box{
+  background:#1c1c2e;padding:24px;border-radius:16px;width:360px;
+  text-align:center;border:1.5px solid #2e2e4a;
+  box-shadow:0 8px 40px rgba(108,99,255,.4);
+}
+.modal-video-box h3{color:#e0dfff;font-size:17px;margin-bottom:12px;}
+.modal-video-box video{width:100%;border-radius:10px;margin-bottom:14px;max-height:200px;}
+.modal-video-btns{display:flex;gap:10px;justify-content:center;}
+.btn-publicar-video{background:#6c63ff;color:#fff;padding:10px 20px;flex:1;}
+.btn-descartar-video{background:#2e2e4a;color:#aaa;padding:10px 20px;flex:1;}
+</style>
+</head>
+<body>
+
+<div id="notificacion"></div>
+
+<!-- OVERLAY MODAL LOGIN/REGISTRO -->
+<div class="overlay" id="overlay">
+  <div class="modal-box" id="modalBox">
+    <button class="modal-close" id="btnCerrarModal">✕</button>
+
+    <div class="auth-tabs" id="authTabs">
+      <button class="auth-tab active" data-tab="login">Iniciar sesión</button>
+      <button class="auth-tab" data-tab="registro">Registrarse</button>
+    </div>
+
+    <!-- LOGIN -->
+    <div class="auth-panel active" id="panelLogin">
+      <input type="text" id="logUsuario" placeholder="Usuario">
+      <input type="password" id="logPassword" placeholder="Contraseña">
+      <button class="btn-primary" id="btnLogin">Entrar</button>
+      <br>
+      <button class="btn-link" id="btnMostrarRecuperar">¿Olvidaste tu contraseña?</button>
+    </div>
+
+    <!-- RECUPERAR CONTRASEÑA -->
+    <div id="panelRecuperar">
+      <h2 style="font-size:16px;color:#e0dfff;margin-bottom:12px;">🔑 Recuperar contraseña</h2>
+      <p style="font-size:13px;color:#aaa;margin-bottom:10px;">Resuelve el captcha para ver tu contraseña.</p>
+      <div class="captcha-wrap">
+        <canvas id="captchaCanvas" width="110" height="36"></canvas>
+        <button class="captcha-refresh" id="btnRefreshCaptcha" title="Nuevo captcha">↻</button>
+        <input type="text" id="captchaInput" placeholder="Escribe el código">
+      </div>
+      <button class="btn-primary" id="btnVerificarCaptcha">Verificar</button>
+      <div id="recuperarResult"></div>
+      <br>
+      <button class="btn-link" id="btnVolverLogin">← Volver al login</button>
+    </div>
+
+    <!-- REGISTRO -->
+    <div class="auth-panel" id="panelRegistro">
+      <input type="text" id="regUsuario" placeholder="Usuario">
+      <input type="password" id="regPassword" placeholder="Contraseña">
+      <button class="btn-primary" id="btnRegistro">Crear cuenta</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL CONFIRMACIÓN VÍDEO -->
+<div id="modalVideo">
+  <div class="modal-video-box">
+    <h3>🎥 Grabación terminada</h3>
+    <video id="previewVideoModal" controls></video>
+    <p style="color:#aaa;font-size:13px;margin-bottom:14px;">¿Qué quieres hacer con la grabación?</p>
+    <div class="modal-video-btns">
+      <button class="btn-publicar-video" id="btnPublicarVideo">📌 Publicar en el muro</button>
+      <button class="btn-descartar-video" id="btnDescartarVideo">🗑️ Descartar</button>
+    </div>
+    <button class="btn-link" id="btnDescargarVideo" style="margin-top:10px;display:block;">⬇️ Descargar también</button>
+  </div>
+</div>
+
+<!-- HEADER -->
+<div class="app-header">
+  <h2>🗒️ Mi Muro</h2>
+  <button id="btnCerrarSesion">Cerrar sesión</button>
+</div>
+
+<!-- PERFIL -->
+<div class="perfil-area">
+  <img id="avatarPerfil" src="" alt="Tu foto" title="Haz clic para cambiar tu foto de perfil">
+  <div class="perfil-info">
+    <div class="perfil-nombre" id="perfilNombre">—</div>
+    <div class="perfil-hint" id="perfilHint">Inicia sesión para publicar</div>
+  </div>
+  <input type="file" id="inputFotoPerfil" accept="image/*">
+</div>
+
+<!-- COMPOSER -->
+<div class="composer">
+  <div class="composer-top">
+    <img id="avatarComposer" src="" alt="">
+    <textarea id="text" placeholder="¿Qué estás pensando?"></textarea>
+  </div>
+  <img id="previewImagen" alt="Vista previa">
+  <video id="previewVideo" controls></video>
+  <div class="composer-actions">
+    <button class="btn-img" id="btnAdjuntarImagen">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/>
+        <polyline points="21 15 16 10 5 21"/>
+      </svg>
+      Imagen
+    </button>
+    <input type="file" id="inputImagenPost" accept="image/*">
+    <button id="postBtn">Publicar</button>
+  </div>
+</div>
+
+<!-- PREVIEW EN VIVO -->
+<div id="livePreviewWrap">
+  <div class="live-badge"><div class="live-dot"></div> EN VIVO</div>
+  <video id="liveVideo" autoplay muted playsinline></video>
+  <div id="liveTimer">⏱ 00:00</div>
+  <button id="btnPararGrabacion">⏹️ Parar grabación</button>
+</div>
+
+<div id="posts"></div>
+
+<!-- BOTÓN GRABAR (único, bien definido) -->
+<button id="btnGrabar" title="Grabar pantalla">&#128308;</button>
+<div id="grabarTooltip">Grabar pantalla</div>
+
+<script>
+// ---- Referencias DOM ----
+const postsDiv=document.getElementById('posts');
+const postBtn=document.getElementById('postBtn');
+const textArea=document.getElementById('text');
+const overlay=document.getElementById('overlay');
+const notificacion=document.getElementById('notificacion');
+const avatarPerfil=document.getElementById('avatarPerfil');
+const avatarComposer=document.getElementById('avatarComposer');
+const inputFotoPerfil=document.getElementById('inputFotoPerfil');
+const inputImagenPost=document.getElementById('inputImagenPost');
+const btnAdjuntarImagen=document.getElementById('btnAdjuntarImagen');
+const previewImagen=document.getElementById('previewImagen');
+const previewVideo=document.getElementById('previewVideo');
+const perfilNombre=document.getElementById('perfilNombre');
+const perfilHint=document.getElementById('perfilHint');
+const btnCerrarSesion=document.getElementById('btnCerrarSesion');
+const btnCerrarModal=document.getElementById('btnCerrarModal');
+const authTabs=document.getElementById('authTabs');
+
+const panelLogin=document.getElementById('panelLogin');
+const panelRegistro=document.getElementById('panelRegistro');
+const panelRecuperar=document.getElementById('panelRecuperar');
+
+const btnLogin=document.getElementById('btnLogin');
+const btnRegistro=document.getElementById('btnRegistro');
+const btnMostrarRecuperar=document.getElementById('btnMostrarRecuperar');
+const btnVolverLogin=document.getElementById('btnVolverLogin');
+const btnVerificarCaptcha=document.getElementById('btnVerificarCaptcha');
+const btnRefreshCaptcha=document.getElementById('btnRefreshCaptcha');
+const captchaInput=document.getElementById('captchaInput');
+const recuperarResult=document.getElementById('recuperarResult');
+
+const modalVideo=document.getElementById('modalVideo');
+const previewVideoModal=document.getElementById('previewVideoModal');
+const btnPublicarVideo=document.getElementById('btnPublicarVideo');
+const btnDescartarVideo=document.getElementById('btnDescartarVideo');
+const btnDescargarVideo=document.getElementById('btnDescargarVideo');
+
+let imagenPostBase64=null;
+let videoPostBlob=null;
+let videoPostURL=null;
+let captchaCode='';
+
+const AVATAR_DEFAULT="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'%3E%3Crect width='80' height='80' rx='40' fill='%23e2e8f0'/%3E%3Ccircle cx='40' cy='32' r='14' fill='%23b0bec5'/%3E%3Cellipse cx='40' cy='68' rx='22' ry='16' fill='%23b0bec5'/%3E%3C/svg%3E";
+
+// ---- Sesión ----
+function estaLogueado(){return !!localStorage.getItem('sesion_usuario');}
+function getUsuarioActual(){return localStorage.getItem('sesion_usuario');}
+function getAvatar(){return localStorage.getItem('fotoPerfil_'+getUsuarioActual())||AVATAR_DEFAULT;}
+
+function actualizarUI(){
+  const logueado=estaLogueado();
+  if(logueado){
+    const usr=getUsuarioActual();
+    const src=getAvatar();
+    avatarPerfil.src=src;
+    avatarComposer.src=src;
+    perfilNombre.textContent=usr;
+    perfilHint.textContent='Haz clic en tu foto para cambiarla';
+    btnCerrarSesion.style.display='inline-block';
+  }else{
+    avatarPerfil.src=AVATAR_DEFAULT;
+    avatarComposer.src=AVATAR_DEFAULT;
+    perfilNombre.textContent='—';
+    perfilHint.textContent='Inicia sesión para publicar';
+    btnCerrarSesion.style.display='none';
+  }
+}
+
+// ---- Notificación ----
+function mostrarNotificacion(msg,color){
+  notificacion.style.background=color||'#4CAF50';
+  notificacion.textContent=msg;
+  notificacion.classList.add('show');
+  setTimeout(()=>notificacion.classList.remove('show'),1800);
+}
+
+// ---- Modal login/registro ----
+function abrirModal(tab){
+  overlay.classList.add('visible');
+  if(tab==='registro') switchTab('registro');
+  else switchTab('login');
+  panelRecuperar.style.display='none';
+  authTabs.style.display='flex';
+}
+function cerrarModal(){
+  overlay.classList.remove('visible');
+  recuperarResult.style.display='none';
+}
+btnCerrarModal.addEventListener('click',cerrarModal);
+overlay.addEventListener('click',e=>{if(e.target===overlay)cerrarModal();});
+
+// ---- Tabs ----
+function switchTab(tab){
+  document.querySelectorAll('.auth-tab').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
+  document.querySelectorAll('.auth-panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('panel'+tab.charAt(0).toUpperCase()+tab.slice(1)).classList.add('active');
+}
+authTabs.addEventListener('click',e=>{if(e.target.dataset.tab) switchTab(e.target.dataset.tab);});
+
+// ---- Registro ----
+btnRegistro.addEventListener('click',()=>{
+  const usr=document.getElementById('regUsuario').value.trim();
+  const pwd=document.getElementById('regPassword').value.trim();
+  if(!usr||!pwd){mostrarNotificacion('Rellena usuario y contraseña','#e05555');return;}
+  if(localStorage.getItem('pwd_'+usr)){mostrarNotificacion('Ese usuario ya existe','#e05555');return;}
+  localStorage.setItem('pwd_'+usr,pwd);
+  localStorage.setItem('sesion_usuario',usr);
+  cerrarModal();
+  actualizarUI();
+  mostrarNotificacion('Cuenta creada y sesión iniciada ✅');
+  document.getElementById('regUsuario').value='';
+  document.getElementById('regPassword').value='';
+});
+
+// ---- Login ----
+btnLogin.addEventListener('click',()=>{
+  const usr=document.getElementById('logUsuario').value.trim();
+  const pwd=document.getElementById('logPassword').value.trim();
+  if(!usr||!pwd){mostrarNotificacion('Rellena los campos','#e05555');return;}
+  if(localStorage.getItem('pwd_'+usr)===pwd){
+    localStorage.setItem('sesion_usuario',usr);
+    cerrarModal();
+    actualizarUI();
+    mostrarNotificacion('¡Bienvenido/a de nuevo! 👋');
+    document.getElementById('logUsuario').value='';
+    document.getElementById('logPassword').value='';
+  }else{
+    mostrarNotificacion('Usuario o contraseña incorrectos ❌','#e05555');
+  }
+});
+
+// ---- Cerrar sesión ----
+btnCerrarSesion.addEventListener('click',()=>{
+  if(!confirm('¿Cerrar sesión?'))return;
+  localStorage.removeItem('sesion_usuario');
+  actualizarUI();
+  mostrarNotificacion('Sesión cerrada');
+});
+
+// ---- Recuperar contraseña ----
+btnMostrarRecuperar.addEventListener('click',()=>{
+  panelLogin.style.display='none';
+  authTabs.style.display='none';
+  panelRecuperar.style.display='block';
+  recuperarResult.style.display='none';
+  captchaInput.value='';
+  generarCaptcha();
+});
+btnVolverLogin.addEventListener('click',()=>{
+  panelRecuperar.style.display='none';
+  panelLogin.style.display='block';
+  authTabs.style.display='flex';
+});
+
+// ---- Captcha ----
+function generarCaptcha(){
+  const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  captchaCode='';
+  for(let i=0;i<5;i++) captchaCode+=chars[Math.floor(Math.random()*chars.length)];
+  const canvas=document.getElementById('captchaCanvas');
+  const ctx=canvas.getContext('2d');
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.fillStyle='#1e1e3a';
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+  for(let i=0;i<40;i++){
+    ctx.strokeStyle=`rgba(${Math.random()*255|0},${Math.random()*255|0},${Math.random()*255|0},.4)`;
+    ctx.beginPath();
+    ctx.moveTo(Math.random()*canvas.width,Math.random()*canvas.height);
+    ctx.lineTo(Math.random()*canvas.width,Math.random()*canvas.height);
+    ctx.stroke();
+  }
+  ctx.font='bold 22px Nunito,sans-serif';
+  ctx.textBaseline='middle';
+  for(let i=0;i<captchaCode.length;i++){
+    const colors=['#a78bfa','#67e8f9','#f0abfc','#86efac','#fcd34d'];
+    ctx.fillStyle=colors[i%colors.length];
+    ctx.save();
+    ctx.translate(16+i*18,18);
+    ctx.rotate((Math.random()-.5)*.5);
+    ctx.fillText(captchaCode[i],0,0);
+    ctx.restore();
+  }
+}
+btnRefreshCaptcha.addEventListener('click',()=>{generarCaptcha();captchaInput.value='';recuperarResult.style.display='none';});
+btnVerificarCaptcha.addEventListener('click',()=>{
+  const respuesta=captchaInput.value.trim().toUpperCase();
+  if(respuesta!==captchaCode){
+    recuperarResult.className='err';
+    recuperarResult.style.display='block';
+    recuperarResult.textContent='Captcha incorrecto. Inténtalo de nuevo.';
+    generarCaptcha();
+    captchaInput.value='';
+    return;
+  }
+  let usr=document.getElementById('logUsuario').value.trim();
+  if(!usr){usr=prompt('Introduce tu nombre de usuario:');if(!usr)return;}
+  const pwd=localStorage.getItem('pwd_'+usr);
+  if(pwd){
+    recuperarResult.className='ok';
+    recuperarResult.style.display='block';
+    recuperarResult.innerHTML=`Tu contraseña es: <strong style="letter-spacing:2px">${pwd}</strong>`;
+  }else{
+    recuperarResult.className='err';
+    recuperarResult.style.display='block';
+    recuperarResult.textContent='No se encontró ese usuario.';
+  }
+});
+
+// ---- Foto de perfil ----
+avatarPerfil.addEventListener('click',()=>{
+  if(!estaLogueado()){abrirModal('login');return;}
+  inputFotoPerfil.click();
+});
+inputFotoPerfil.addEventListener('change',function(){
+  const file=this.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    localStorage.setItem('fotoPerfil_'+getUsuarioActual(),e.target.result);
+    actualizarUI();
+    mostrarNotificacion('Foto de perfil actualizada 🖼️');
+  };
+  reader.readAsDataURL(file);
+  this.value='';
+});
+
+// ---- Imagen en post ----
+btnAdjuntarImagen.addEventListener('click',()=>{
+  if(!estaLogueado()){abrirModal('login');return;}
+  inputImagenPost.click();
+});
+inputImagenPost.addEventListener('change',function(){
+  const file=this.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    imagenPostBase64=e.target.result;
+    videoPostBlob=null;
+    previewVideo.style.display='none';
+    previewImagen.src=imagenPostBase64;
+    previewImagen.style.display='block';
+    mostrarNotificacion('Imagen lista 📎');
+  };
+  reader.readAsDataURL(file);
+  this.value='';
+});
+
+// ---- Publicar ----
+textArea.addEventListener('focus',()=>{
+  if(!estaLogueado()){textArea.blur();abrirModal('login');}
+});
+
+postBtn.addEventListener('click',()=>{
+  if(!estaLogueado()){abrirModal('login');return;}
+  const texto=textArea.value.trim();
+  if(!texto&&!imagenPostBase64&&!videoPostBlob)return;
+
+  const guardarPost=(videoBase64)=>{
+    let posts=JSON.parse(localStorage.getItem('posts')||'[]');
+    posts.push({
+      usuario:getUsuarioActual(),
+      avatar:getAvatar(),
+      texto:texto,
+      imagen:imagenPostBase64||null,
+      video:videoBase64||null,
+      likes:0,
+      timestamp:Date.now()
+    });
+    localStorage.setItem('posts',JSON.stringify(posts));
+    textArea.value='';
+    imagenPostBase64=null;
+    videoPostBlob=null;
+    if(videoPostURL){URL.revokeObjectURL(videoPostURL);videoPostURL=null;}
+    previewImagen.src='';previewImagen.style.display='none';
+    previewVideo.src='';previewVideo.style.display='none';
+    cargarPosts();
+    mostrarNotificacion('Post publicado ✅');
+  };
+
+  if(videoPostBlob){
+    // Convertir blob a base64 para guardar en localStorage
+    const reader=new FileReader();
+    reader.onload=e=>guardarPost(e.target.result);
+    reader.readAsDataURL(videoPostBlob);
+  }else{
+    guardarPost(null);
+  }
+});
+
+// ---- Fecha ----
+function formatFecha(ts){
+  if(!ts)return '';
+  const diff=Date.now()-ts;
+  const min=Math.floor(diff/60000);
+  const h=Math.floor(diff/3600000);
+  if(min<1)return 'Ahora mismo';
+  if(min<60)return `Hace ${min} min`;
+  if(h<24)return `Hace ${h} h`;
+  const d=new Date(ts);
+  return d.toLocaleDateString('es-ES',{day:'2-digit',month:'2-digit',year:'numeric'})+' · '+d.toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'});
+}
+
+// ---- Cargar posts ----
+function cargarPosts(){
+  const posts=JSON.parse(localStorage.getItem('posts')||'[]');
+  postsDiv.innerHTML='';
+  posts.slice().reverse().forEach((post,index)=>{
+    const realIndex=posts.length-1-index;
+    const div=document.createElement('div');div.className='post';
+    const header=document.createElement('div');header.className='post-header';
+    const av=document.createElement('img');av.className='post-avatar';av.src=post.avatar||AVATAR_DEFAULT;
+    const info=document.createElement('div');info.className='post-header-info';
+    const usr=document.createElement('span');usr.className='post-usuario';usr.textContent=post.usuario||'Anónimo';
+    const fecha=document.createElement('span');fecha.className='post-fecha';fecha.textContent=formatFecha(post.timestamp);
+    info.appendChild(usr);info.appendChild(fecha);
+    header.appendChild(av);header.appendChild(info);
+    const texto=document.createElement('div');texto.className='post-texto';texto.textContent=post.texto;
+    div.appendChild(header);div.appendChild(texto);
+
+    if(post.imagen){
+      const img=document.createElement('img');img.className='post-imagen';img.src=post.imagen;
+      div.appendChild(img);
+    }
+    if(post.video){
+      const vid=document.createElement('video');vid.className='post-video';
+      vid.src=post.video;vid.controls=true;
+      div.appendChild(vid);
+    }
+
+    const footer=document.createElement('div');footer.className='post-footer';
+    const likesDiv=document.createElement('div');likesDiv.className='post-likes';
+    likesDiv.innerHTML=`❤️ <span>${post.likes}</span>`;
+    const acciones=document.createElement('div');acciones.className='accionesPost';
+
+    const likeBtn=document.createElement('button');likeBtn.textContent='❤️ Like';likeBtn.className='likeBtn';
+    likeBtn.addEventListener('click',()=>{
+      if(!estaLogueado()){abrirModal('login');return;}
+      let ps=JSON.parse(localStorage.getItem('posts')||'[]');
+      ps[realIndex].likes++;
+      localStorage.setItem('posts',JSON.stringify(ps));
+      cargarPosts();
+    });
+
+    const esAutor=estaLogueado()&&getUsuarioActual()===post.usuario;
+    if(esAutor){
+      const editarBtn=document.createElement('button');editarBtn.textContent='✏️ Editar';editarBtn.className='editarBtn';
+      editarBtn.addEventListener('click',()=>{
+        const nuevoTexto=prompt('Editar:',post.texto);
+        if(nuevoTexto===null)return;
+        let ps=JSON.parse(localStorage.getItem('posts')||'[]');
+        ps[realIndex].texto=nuevoTexto;
+        localStorage.setItem('posts',JSON.stringify(ps));
+        cargarPosts();
+      });
+      const borrarBtn=document.createElement('button');borrarBtn.textContent='🗑️ Borrar';borrarBtn.className='borrarBtn';
+      borrarBtn.addEventListener('click',()=>{
+        if(!confirm('¿Borrar este post?'))return;
+        let ps=JSON.parse(localStorage.getItem('posts')||'[]');
+        ps.splice(realIndex,1);
+        localStorage.setItem('posts',JSON.stringify(ps));
+        cargarPosts();
+      });
+      acciones.appendChild(editarBtn);
+      acciones.appendChild(borrarBtn);
+    }
+
+    acciones.insertBefore(likeBtn,acciones.firstChild);
+    footer.appendChild(likesDiv);footer.appendChild(acciones);
+    div.appendChild(footer);
+    postsDiv.appendChild(div);
+  });
+}
+
+// ---- Grabación de pantalla ----
+let mediaRecorder=null;
+let chunks=[];
+let timerInterval=null;
+let timerSeconds=0;
+
+const btnGrabar=document.getElementById('btnGrabar');
+const grabarTooltip=document.getElementById('grabarTooltip');
+const livePreviewWrap=document.getElementById('livePreviewWrap');
+const liveVideo=document.getElementById('liveVideo');
+const liveTimer=document.getElementById('liveTimer');
+const btnPararGrabacion=document.getElementById('btnPararGrabacion');
+
+function formatTimer(s){
+  const m=Math.floor(s/60).toString().padStart(2,'0');
+  const ss=(s%60).toString().padStart(2,'0');
+  return `⏱ ${m}:${ss}`;
+}
+
+function mostrarLive(stream){
+  liveVideo.srcObject=stream;
+  livePreviewWrap.classList.add('visible');
+  // scroll suave al preview
+  livePreviewWrap.scrollIntoView({behavior:'smooth',block:'start'});
+  timerSeconds=0;
+  liveTimer.textContent=formatTimer(0);
+  timerInterval=setInterval(()=>{
+    timerSeconds++;
+    liveTimer.textContent=formatTimer(timerSeconds);
+  },1000);
+}
+
+function ocultarLive(){
+  livePreviewWrap.classList.remove('visible');
+  liveVideo.srcObject=null;
+  clearInterval(timerInterval);
+  timerInterval=null;
+}
+
+btnGrabar.addEventListener('mouseenter',()=>{grabarTooltip.style.opacity='1';});
+btnGrabar.addEventListener('mouseleave',()=>{grabarTooltip.style.opacity='0';});
+
+function detenerGrabacion(){
+  if(mediaRecorder && mediaRecorder.state==='recording'){
+    mediaRecorder.stop();
+  }
+}
+
+async function iniciarGrabacion(){
+  if(!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia){
+    mostrarNotificacion('Tu navegador no soporta grabación de pantalla','#e05555');
+    return;
+  }
+  try{
+    const stream=await navigator.mediaDevices.getDisplayMedia({video:{cursor:'always'},audio:false});
+    chunks=[];
+
+    const mimeType=['video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm','video/mp4']
+      .find(t=>MediaRecorder.isTypeSupported(t)) || '';
+
+    mediaRecorder=new MediaRecorder(stream, mimeType ? {mimeType} : {});
+
+    mediaRecorder.ondataavailable=e=>{if(e.data && e.data.size>0) chunks.push(e.data);};
+
+    mediaRecorder.onstop=()=>{
+      btnGrabar.textContent='🔴';
+      btnGrabar.classList.remove('grabando');
+      grabarTooltip.textContent='Grabar pantalla';
+      stream.getTracks().forEach(t=>t.stop());
+      ocultarLive();
+
+      if(chunks.length===0){mostrarNotificacion('Grabación vacía','#e05555');return;}
+
+      const blob=new Blob(chunks,{type: mimeType||'video/webm'});
+      videoPostBlob=blob;
+      if(videoPostURL) URL.revokeObjectURL(videoPostURL);
+      videoPostURL=URL.createObjectURL(blob);
+
+      previewVideoModal.src=videoPostURL;
+      modalVideo.classList.add('visible');
+    };
+
+    stream.getVideoTracks()[0].addEventListener('ended',detenerGrabacion);
+
+    mediaRecorder.start(200);
+    mostrarLive(stream);
+    btnGrabar.textContent='⏹️';
+    btnGrabar.classList.add('grabando');
+    grabarTooltip.textContent='Detener grabación';
+    mostrarNotificacion('Grabando en vivo 🔴','#e05555');
+
+  }catch(err){
+    mediaRecorder=null;
+    if(err.name==='NotAllowedError'||err.name==='PermissionDeniedError'){
+      mostrarNotificacion('Permiso de pantalla denegado','#e05555');
+    }else{
+      mostrarNotificacion('Error: '+err.message,'#e05555');
+    }
+  }
+}
+
+btnGrabar.addEventListener('click',function(e){
+  e.preventDefault();
+  e.stopPropagation();
+  if(mediaRecorder && mediaRecorder.state==='recording'){
+    detenerGrabacion();
+  }else{
+    iniciarGrabacion();
+  }
+});
+
+btnPararGrabacion.addEventListener('click',function(e){
+  e.preventDefault();
+  detenerGrabacion();
+});
+
+// ---- Modal de vídeo: Publicar ----
+btnPublicarVideo.addEventListener('click',()=>{
+  if(!estaLogueado()){
+    modalVideo.classList.remove('visible');
+    abrirModal('login');
+    return;
+  }
+  modalVideo.classList.remove('visible');
+  // Poner el vídeo en el composer y mostrarlo
+  imagenPostBase64=null;
+  previewImagen.style.display='none';
+  previewVideo.src=videoPostURL;
+  previewVideo.style.display='block';
+  mostrarNotificacion('Vídeo listo para publicar 🎥');
+});
+
+// ---- Modal de vídeo: Descargar ----
+btnDescargarVideo.addEventListener('click',()=>{
+  if(!videoPostBlob) return;
+  const a=document.createElement('a');
+  a.href=videoPostURL;
+  a.download='mimuro-'+new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')+'.webm';
+  a.click();
+  mostrarNotificacion('Descarga iniciada ⬇️');
+});
+
+// ---- Modal de vídeo: Descartar ----
+btnDescartarVideo.addEventListener('click',()=>{
+  modalVideo.classList.remove('visible');
+  videoPostBlob=null;
+  if(videoPostURL){URL.revokeObjectURL(videoPostURL);videoPostURL=null;}
+  previewVideoModal.src='';
+  mostrarNotificacion('Grabación descartada');
+});
+
+// ---- Init ----
+actualizarUI();
+cargarPosts();
+</script>
+</body>
+</html>
